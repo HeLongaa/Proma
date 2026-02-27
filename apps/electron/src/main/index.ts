@@ -4,6 +4,7 @@ import { existsSync } from 'fs'
 import { createApplicationMenu } from './menu'
 import { registerIpcHandlers } from './ipc'
 import { createTray, destroyTray } from './tray'
+import { getSettings } from './lib/settings-service'
 import { initializeRuntime } from './lib/runtime-init'
 import { seedDefaultSkills } from './lib/config-paths'
 import { stopAllAgents } from './lib/agent-service'
@@ -171,8 +172,11 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Create system tray icon
-  createTray()
+  // Create system tray icon (if enabled in settings)
+  const settings = getSettings()
+  if (settings.showTrayIcon !== false) {
+    createTray()
+  }
 
   // Create main window (will be shown when ready)
   createWindow()

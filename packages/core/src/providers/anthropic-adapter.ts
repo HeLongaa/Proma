@@ -51,6 +51,10 @@ interface AnthropicMessage {
 /** Anthropic SSE 事件 */
 interface AnthropicSSEEvent {
   type: string
+  /** message_start 的 message 对象 */
+  message?: {
+    usage?: { input_tokens?: number; output_tokens?: number }
+  }
   /** content_block_start 的 content_block */
   content_block?: {
     type: string
@@ -68,6 +72,8 @@ interface AnthropicSSEEvent {
     /** message_delta 的 stop_reason */
     stop_reason?: string
   }
+  /** message_delta 的 usage（最终输出 token 数） */
+  usage?: { output_tokens?: number }
 }
 
 /** Anthropic 标题响应 */
@@ -280,9 +286,23 @@ export class AnthropicAdapter implements ProviderAdapter {
         }
       }
 
-      // message_delta 携带 stop_reason
-      if (event.type === 'message_delta' && event.delta?.stop_reason) {
-        events.push({ type: 'done', stopReason: event.delta.stop_reason })
+      // message_start 携带输入 token 数
+      if (event.type === 'message_start' && event.message?.usage) {
+        events.push({
+          type: 'usage',
+          inputTokens: event.message.usage.input_tokens,
+          outputTokens: event.message.usage.output_tokens,
+        })
+      }
+
+      // message_delta 携带 stop_reason 和最终输出 token 数
+      if (event.type === 'message_delta') {
+        if (event.delta?.stop_reason) {
+          events.push({ type: 'done', stopReason: event.delta.stop_reason })
+        }
+        if (event.usage?.output_tokens) {
+          events.push({ type: 'usage', outputTokens: event.usage.output_tokens })
+        }
       }
 
       return events

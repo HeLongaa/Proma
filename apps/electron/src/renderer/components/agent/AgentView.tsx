@@ -19,7 +19,6 @@ import { toast } from 'sonner'
 import { Bot, CornerDownLeft, Square, Settings, Paperclip, FolderPlus, AlertCircle, X, FolderOpen, Copy, Check, Sparkles } from 'lucide-react'
 import { AgentMessages } from './AgentMessages'
 import { AgentHeader } from './AgentHeader'
-import { ContextUsageBadge } from './ContextUsageBadge'
 import { PermissionBanner } from './PermissionBanner'
 import { PermissionModeSelector } from './PermissionModeSelector'
 import { AskUserBanner } from './AskUserBanner'
@@ -41,7 +40,6 @@ import {
   agentPendingPromptAtom,
   agentPendingFilesAtom,
   agentWorkspacesAtom,
-  agentContextStatusAtom,
   agentStreamErrorsAtom,
   currentAgentErrorAtom,
   currentAgentSessionDraftAtom,
@@ -77,7 +75,6 @@ export function AgentView(): React.ReactElement {
   const [pendingPrompt, setPendingPrompt] = useAtom(agentPendingPromptAtom)
   const [pendingFiles, setPendingFiles] = useAtom(agentPendingFilesAtom)
   const workspaces = useAtomValue(agentWorkspacesAtom)
-  const contextStatus = useAtomValue(agentContextStatusAtom)
   const setAgentStreamErrors = useSetAtom(agentStreamErrorsAtom)
   const agentError = useAtomValue(currentAgentErrorAtom)
   const store = useStore()
@@ -543,33 +540,6 @@ export function AgentView(): React.ReactElement {
     window.electronAPI.stopAgent(currentSessionId).catch(console.error)
   }, [currentSessionId, setStreamingStates])
 
-  /** 手动发送 /compact 命令 */
-  const handleCompact = React.useCallback((): void => {
-    if (!currentSessionId || !agentChannelId || streaming) return
-
-    // 初始化流式状态
-    setStreamingStates((prev) => {
-      const map = new Map(prev)
-      const current = prev.get(currentSessionId) ?? {
-        running: true,
-        content: '',
-        toolActivities: [],
-        model: agentModelId || undefined,
-        startedAt: Date.now(),
-      }
-      map.set(currentSessionId, { ...current, running: true, startedAt: current.startedAt ?? Date.now() })
-      return map
-    })
-
-    window.electronAPI.sendAgentMessage({
-      sessionId: currentSessionId,
-      userMessage: '/compact',
-      channelId: agentChannelId,
-      modelId: agentModelId || undefined,
-      workspaceId: currentWorkspaceId || undefined,
-    }).catch(console.error)
-  }, [currentSessionId, agentChannelId, agentModelId, currentWorkspaceId, streaming, setStreamingStates])
-
   /** 复制错误信息到剪贴板 */
   const handleCopyError = React.useCallback(async (): Promise<void> => {
     if (!agentError) return
@@ -774,13 +744,6 @@ export function AgentView(): React.ReactElement {
                       filterChannelId={agentChannelId}
                       externalSelectedModel={externalSelectedModel}
                       onModelSelect={handleModelSelect}
-                    />
-                    <ContextUsageBadge
-                      inputTokens={contextStatus.inputTokens}
-                      contextWindow={contextStatus.contextWindow}
-                      isCompacting={contextStatus.isCompacting}
-                      isProcessing={streaming}
-                      onCompact={handleCompact}
                     />
                   </>
                 )}

@@ -24,6 +24,7 @@ export function getSettings(): AppSettings {
       onboardingCompleted: false,
       environmentCheckSkipped: false,
       notificationsEnabled: true,
+      showTrayIcon: true,
     }
   }
 
@@ -39,6 +40,8 @@ export function getSettings(): AppSettings {
       environmentCheckSkipped: data.environmentCheckSkipped ?? false,
       lastEnvironmentCheck: data.lastEnvironmentCheck,
       notificationsEnabled: data.notificationsEnabled ?? true,
+      showTrayIcon: data.showTrayIcon ?? true,
+      newConversationShortcut: data.newConversationShortcut,
     }
   } catch (error) {
     console.error('[设置] 读取失败:', error)
@@ -47,6 +50,7 @@ export function getSettings(): AppSettings {
       onboardingCompleted: false,
       environmentCheckSkipped: false,
       notificationsEnabled: true,
+      showTrayIcon: true,
     }
   }
 }

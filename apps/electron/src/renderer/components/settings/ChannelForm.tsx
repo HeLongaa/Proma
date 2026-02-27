@@ -40,6 +40,12 @@ import type {
 } from '@proma/shared'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
+  CHANNEL_ICON_OPTIONS,
+  getIconByKey,
+  resolveChannelIcon,
+  DefaultLogo,
+} from '@/lib/model-logo'
+import {
   SettingsSection,
   SettingsCard,
   SettingsInput,
@@ -106,6 +112,8 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
   const [baseUrl, setBaseUrl] = React.useState(channel?.baseUrl ?? PROVIDER_DEFAULT_URLS.anthropic)
   const [apiKey, setApiKey] = React.useState('')
   const [showApiKey, setShowApiKey] = React.useState(false)
+  const [iconUrl, setIconUrl] = React.useState(channel?.iconUrl ?? '')
+  const [showIconPicker, setShowIconPicker] = React.useState(false)
   const [models, setModels] = React.useState<ChannelModel[]>(channel?.models ?? [])
   const [enabled, setEnabled] = React.useState(channel?.enabled ?? true)
 
@@ -234,6 +242,7 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
         provider,
         baseUrl,
         apiKey: apiKey || undefined,
+        iconUrl,
         models,
         enabled,
       })
@@ -243,6 +252,7 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
         provider,
         baseUrl,
         apiKey,
+        iconUrl: iconUrl || undefined,
         models,
         enabled,
       }
@@ -320,6 +330,58 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
             placeholder="例如: My Anthropic"
             required
           />
+          {/* 渠道图标选择 */}
+          <div className="px-4 py-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">渠道图标</div>
+              <button
+                type="button"
+                onClick={() => setShowIconPicker(!showIconPicker)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md border border-border hover:bg-muted/50 transition-colors"
+              >
+                <img
+                  src={resolveChannelIcon(iconUrl, baseUrl, provider)}
+                  alt=""
+                  className="w-6 h-6 rounded"
+                />
+                <span className="text-xs text-muted-foreground">
+                  {iconUrl ? CHANNEL_ICON_OPTIONS.find((o) => o.key === iconUrl)?.label ?? '自定义' : '自动'}
+                </span>
+              </button>
+            </div>
+            {showIconPicker && (
+              <div className="grid grid-cols-9 gap-1.5 p-2 rounded-lg border border-border bg-muted/30">
+                {/* 自动（清除自定义图标） */}
+                <button
+                  type="button"
+                  onClick={() => { setIconUrl(''); setShowIconPicker(false) }}
+                  className={cn(
+                    'flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-colors',
+                    !iconUrl ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted'
+                  )}
+                  title="自动识别"
+                >
+                  <img src={DefaultLogo} alt="" className="w-7 h-7 rounded" />
+                  <span className="text-[10px] text-muted-foreground leading-none">自动</span>
+                </button>
+                {CHANNEL_ICON_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => { setIconUrl(opt.key); setShowIconPicker(false) }}
+                    className={cn(
+                      'flex flex-col items-center gap-0.5 p-1.5 rounded-md transition-colors',
+                      iconUrl === opt.key ? 'bg-primary/10 ring-1 ring-primary/30' : 'hover:bg-muted'
+                    )}
+                    title={opt.label}
+                  >
+                    <img src={opt.src} alt={opt.label} className="w-7 h-7 rounded" />
+                    <span className="text-[10px] text-muted-foreground leading-none truncate w-full text-center">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <SettingsSelect
             label="供应商类型"
             value={provider}

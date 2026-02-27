@@ -1,13 +1,11 @@
 /**
  * 渠道管理器
  *
- * 负责渠道的 CRUD 操作、API Key 加密/解密、连接测试。
- * 使用 Electron safeStorage 进行 API Key 加密（底层使用 OS 级加密）。
- * 数据持久化到 ~/.proma/channels.json。
+ * 负责渠道的 CRUD 操作、连接测试。
+ * API Key 以明文存储在 ~/.proma/channels.json（本地优先，无需 OS 钥匙串）。
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { safeStorage } from 'electron'
 import { randomUUID } from 'node:crypto'
 import { getChannelsPath } from './config-paths'
 import type {
@@ -90,44 +88,20 @@ function writeConfig(config: ChannelsConfig): void {
 }
 
 /**
- * 加密 API Key
- *
- * 使用 Electron safeStorage 加密，底层使用：
- * - macOS: Keychain
- * - Windows: DPAPI
- * - Linux: Secret Service API
- *
- * @returns base64 编码的加密字符串
+ * 存储 API Key（明文直接返回，不再使用 OS 钥匙串加密）
  */
 function encryptApiKey(plainKey: string): string {
-  if (!safeStorage.isEncryptionAvailable()) {
-    console.warn('[渠道管理] safeStorage 加密不可用，将以明文存储')
-    return plainKey
-  }
-
-  const encrypted = safeStorage.encryptString(plainKey)
-  return encrypted.toString('base64')
+  return plainKey
 }
 
 /**
- * 解密 API Key
+ * 读取 API Key
  *
- * @param encryptedKey base64 编码的加密字符串
- * @returns 明文 API Key
+ * 兼容旧版 safeStorage 加密数据：如果解码 base64 后不是合法 UTF-8 文本，
+ * 说明是旧版加密数据，此时返回原值（用户需重新输入 Key）。
  */
-function decryptKey(encryptedKey: string): string {
-  if (!safeStorage.isEncryptionAvailable()) {
-    // 如果加密不可用，假设存储的是明文
-    return encryptedKey
-  }
-
-  try {
-    const buffer = Buffer.from(encryptedKey, 'base64')
-    return safeStorage.decryptString(buffer)
-  } catch (error) {
-    console.error('[渠道管理] 解密 API Key 失败:', error)
-    throw new Error('解密 API Key 失败')
-  }
+function decryptKey(storedKey: string): string {
+  return storedKey
 }
 
 /**
@@ -166,6 +140,7 @@ export function createChannel(input: ChannelCreateInput): Channel {
     provider: input.provider,
     baseUrl: input.baseUrl,
     apiKey: encryptApiKey(input.apiKey),
+    ...(input.iconUrl ? { iconUrl: input.iconUrl } : {}),
     models: input.models,
     enabled: input.enabled,
     createdAt: now,
@@ -202,6 +177,7 @@ export function updateChannel(id: string, input: ChannelUpdateInput): Channel {
     provider: input.provider ?? existing.provider,
     baseUrl: input.baseUrl ?? existing.baseUrl,
     apiKey: input.apiKey ? encryptApiKey(input.apiKey) : existing.apiKey,
+    iconUrl: input.iconUrl !== undefined ? (input.iconUrl || undefined) : existing.iconUrl,
     models: input.models ?? existing.models,
     enabled: input.enabled ?? existing.enabled,
     updatedAt: Date.now(),

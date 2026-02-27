@@ -1,7 +1,32 @@
-import { Menu, shell } from 'electron'
+import { BrowserWindow, Menu, shell } from 'electron'
+import { getSettings } from './lib/settings-service'
+
+/**
+ * 将内部快捷键格式转为 Electron accelerator 格式
+ *
+ * @example 'meta+n' => 'CmdOrCtrl+N'
+ * @example 'ctrl+shift+n' => 'CmdOrCtrl+Shift+N'
+ */
+function toAccelerator(shortcut: string): string {
+  if (!shortcut) return 'CmdOrCtrl+N'
+  const parts = shortcut.toLowerCase().split('+')
+  const key = parts[parts.length - 1] ?? 'n'
+  const modifiers = parts.slice(0, -1)
+
+  const modMap: Record<string, string> = {
+    meta: 'CmdOrCtrl',
+    ctrl: 'CmdOrCtrl',
+    alt: 'Alt',
+    shift: 'Shift',
+  }
+  const modStr = modifiers.map((m) => modMap[m] ?? m).join('+')
+  return modStr ? `${modStr}+${key.toUpperCase()}` : `CmdOrCtrl+${key.toUpperCase()}`
+}
 
 export function createApplicationMenu(): Menu {
   const isMac = process.platform === 'darwin'
+  const settings = getSettings()
+  const newConvAccelerator = toAccelerator(settings.newConversationShortcut || (isMac ? 'meta+n' : 'ctrl+n'))
 
   const template: Electron.MenuItemConstructorOptions[] = [
     // 应用菜单 (仅 macOS)
@@ -11,6 +36,17 @@ export function createApplicationMenu(): Menu {
             label: 'Proma',
             submenu: [
               { role: 'about' as const, label: '关于 Proma' },
+              { type: 'separator' as const },
+              {
+                label: '偏好设置…',
+                accelerator: 'CmdOrCtrl+,',
+                click: () => {
+                  const win = BrowserWindow.getFocusedWindow()
+                  if (win && !win.isDestroyed()) {
+                    win.webContents.send('menu:navigate-settings')
+                  }
+                },
+              },
               { type: 'separator' as const },
               { role: 'services' as const, label: '服务' },
               { type: 'separator' as const },
@@ -27,7 +63,20 @@ export function createApplicationMenu(): Menu {
     // 文件菜单
     {
       label: '文件',
-      submenu: [isMac ? { role: 'close' as const, label: '关闭窗口' } : { role: 'quit' as const, label: '退出' }],
+      submenu: [
+        {
+          label: '新建对话',
+          accelerator: newConvAccelerator,
+          click: () => {
+            const win = BrowserWindow.getFocusedWindow()
+            if (win && !win.isDestroyed()) {
+              win.webContents.send('menu:new-conversation')
+            }
+          },
+        },
+        { type: 'separator' as const },
+        isMac ? { role: 'close' as const, label: '关闭窗口' } : { role: 'quit' as const, label: '退出' },
+      ],
     },
 
     // 编辑菜单

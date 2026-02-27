@@ -461,7 +461,17 @@ export function AboutSettings(): React.ReactElement {
         </SettingsRow>
         <SettingsRow label="项目地址">
           <a
-            href="https://github.com/ErlichLiu/Proma.git"
+            href="https://github.com/HeLongaa/Proma"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-primary hover:underline"
+          >
+            github.com/HeLongaa/Proma
+          </a>
+        </SettingsRow>
+        <SettingsRow label="原项目地址">
+          <a
+            href="https://github.com/ErlichLiu/Proma"
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm text-primary hover:underline"

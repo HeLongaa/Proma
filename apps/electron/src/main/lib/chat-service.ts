@@ -342,6 +342,8 @@ export async function sendMessage(
   // 在 try 外累积流式内容，abort 时 catch 块仍可访问
   let accumulatedContent = ''
   let accumulatedReasoning = ''
+  let totalInputTokens: number | undefined
+  let totalOutputTokens: number | undefined
 
   try {
     // 7. 获取适配器
@@ -383,7 +385,7 @@ export async function sendMessage(
         continuationMessages: continuationMessages.length > 0 ? continuationMessages : undefined,
       })
 
-      const { content, reasoning, toolCalls, stopReason } = await streamSSE({
+      const { content, reasoning, toolCalls, stopReason, inputTokens, outputTokens } = await streamSSE({
         request,
         adapter,
         signal: controller.signal,
@@ -410,10 +412,14 @@ export async function sendMessage(
                 activity: { type: 'start', toolName: event.toolName, toolCallId: event.toolCallId },
               })
               break
-            // done 事件在外部处理
+            // done / usage 事件在外部处理
           }
         },
       })
+
+      // 累计本轮 token 用量
+      if (inputTokens !== undefined) totalInputTokens = inputTokens
+      if (outputTokens !== undefined) totalOutputTokens = outputTokens
 
       // 如果没有工具调用或不是 tool_use 停止，退出循环
       if (!toolCalls || toolCalls.length === 0 || stopReason !== 'tool_use') {
@@ -478,6 +484,8 @@ export async function sendMessage(
       conversationId,
       model: modelId,
       messageId: accumulatedContent.trim() ? assistantMsgId : undefined,
+      inputTokens: totalInputTokens,
+      outputTokens: totalOutputTokens,
     })
   } catch (error) {
     // 被中止的请求：保存已输出的部分内容，通知前端停止
@@ -508,11 +516,15 @@ export async function sendMessage(
           conversationId,
           model: modelId,
           messageId: assistantMsgId,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
         })
       } else {
         webContents.send(CHAT_IPC_CHANNELS.STREAM_COMPLETE, {
           conversationId,
           model: modelId,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
         })
       }
       return

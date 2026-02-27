@@ -117,5 +117,5 @@ nsis:
 # ============================================
 publish:
   provider: github
-  owner: ErlichLiu
+  owner: HeLongaa
   repo: Proma

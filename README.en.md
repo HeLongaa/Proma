@@ -1,4 +1,6 @@
-# Proma
+# Proma (Personal Custom Fork)
+
+> A personal fork of [ErlichLiu/Proma](https://github.com/ErlichLiu/Proma) with UI refinements, interaction improvements, and feature enhancements.
 
 Next-generation AI desktop app with integrated agents. Local-first, multi-provider, fully open source.
 
@@ -6,10 +8,34 @@ Next-generation AI desktop app with integrated agents. Local-first, multi-provid
 
 ![Proma Poster](https://img.erlich.fun/personal-blog/uPic/pb.png)
 
-### Commercial Version Running in Parallel
-Proma also offers a commercial version. If you need **cloud features** | **stable and reliable API** | **cost-effective subscription plans** | **simple user experience**, you're welcome to support the commercial version of Proma: https://proma.cool/download
+---
 
-The core vision of Proma is not to replace any particular software. Currently, only the infrastructure of Proma has been implemented. Going forward, Proma will continue to build multi-agent collaboration (personal and team), agent connections with external services, Tools and Skills consolidation, and the ability to proactively provide software and suggestions based on user understanding and memory. Proma is evolving rapidly with the help of VibeCoding tools. PRs are welcome!
+## Fork Changelog
+
+This fork includes the following modifications and customizations on top of the original Proma project:
+
+### Dependency Upgrades
+
+- **Electron** 39.x → 40.x
+- **electron-builder** 25.x → 26.x
+
+### Features & UI Enhancements
+
+- Conversation list dropdown menu (Rename / Pin / Share / Export / Delete), channel icon picker
+- Redesigned new-conversation button + configurable shortcut (default ⌘N / Ctrl+N), synced to menu bar
+- Chat token monitoring, Markdown export, tray icon toggle, ⌘, to open Settings
+- Unified rounded-corner frosted-glass style for mode switcher and menus
+
+### Simplifications
+
+- Removed official provider and commercial references
+- Removed context token badge from Agent view
+
+---
+
+## Original Project
+
+The following content is from the original [Proma](https://github.com/ErlichLiu/Proma) project.
 
 ## Screenshots
 
@@ -54,7 +80,27 @@ Full-protocol LLM channel support for all domestic and international providers, 
 
 ## Getting Started
 
-Download the latest release for your platform:
+### Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/ErlichLiu/Proma.git
+cd Proma
+
+# Install dependencies
+bun install
+
+# Development mode
+bun run dev
+
+# Build distribution
+cd apps/electron
+bun run dist:mac    # macOS
+bun run dist:win    # Windows
+bun run dist:linux  # Linux
+```
+
+### Download Original Release
 
 **[Download Proma](https://github.com/ErlichLiu/Proma/releases)**
 
@@ -64,24 +110,24 @@ Download the latest release for your platform:
 
 Go to **Settings > Channels**, click **Add Channel**, select a provider, and enter your API Key. Proma will auto-fill the correct API endpoint. Click **Test Connection** to verify, then **Fetch Models** to load available models.
 
-### Agent Mode (Anthropic Only)
+### Agent Mode
 
-Agent mode requires an **Anthropic** channel. After adding one, go to **Settings > Agent** to select your Anthropic channel and preferred model (Claude Sonnet 4 / Opus 4 recommended). The agent uses [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) under the hood.
+Agent mode requires an **Anthropic** channel (or compatible endpoint). After adding one, go to **Settings > Agent** to select your channel and preferred model (Claude Sonnet 4 / Opus 4 recommended). The agent uses [Claude Agent SDK](https://github.com/anthropics/claude-agent-sdk) under the hood.
 
 ### Special Provider Endpoints
 
-MiniMax, Kimi (Moonshot), and Zhipu GLM use dedicated API endpoints — these are auto-configured when you select the provider. All three support their **programming membership plans** for API access:
+MiniMax, Kimi (Moonshot), and Zhipu GLM use dedicated API endpoints — these are auto-configured when you select the provider:
 
 | Provider | Chat Mode | Agent Mode | Note |
 |----------|----------|----------|------|
-| MiniMax | `https://api.minimaxi.com/v1` | `https://api.minimaxi.com/anthropic`| Supports MiniMax Pro membership |
-| Kimi | `https://api.moonshot.cn/v1` | `https://api.moonshot.cn/anthropic`| Supports Moonshot developer plan |
-| Zhipu GLM | `https://open.bigmodel.cn/api/paas/v4` | `https://open.bigmodel.cn/api/anthropic`| Supports Zhipu developer plan |
+| MiniMax | `https://api.minimaxi.com/v1` | `https://api.minimaxi.com/anthropic` | Supports MiniMax Pro membership |
+| Kimi | `https://api.moonshot.cn/v1` | `https://api.moonshot.cn/anthropic` | Supports Moonshot developer plan |
+| Zhipu GLM | `https://open.bigmodel.cn/api/paas/v4` | `https://open.bigmodel.cn/api/anthropic` | Supports Zhipu developer plan |
 
 ## Tech Stack
 
 - **Runtime** — Bun
-- **Framework** — Electron + React 18
+- **Framework** — Electron 40 + React 18
 - **State** — Jotai
 - **Styling** — Tailwind CSS + shadcn/ui
 - **Build** — Vite (renderer) + esbuild (main/preload)
@@ -100,11 +146,7 @@ Proma is built on the shoulders of these great projects:
 
 ## Contributing
 
-We welcome contributions to Proma! Whether it's fixing bugs, adding features, or improving documentation, every contribution matters.
-
-**PR Bounty Program** — Proma currently offers a PR bounty program. Merged PRs automatically receive a generous bounty that can be used with Claude Code and similar products, helping you develop more effectively with AI-assisted tools. Simply leave your email address in the PR description when submitting.
-
-![Proma Given](https://img.erlich.fun/personal-blog/uPic/PR%20%E8%B5%A0%E9%87%91%201.png)
+Contributions welcome at the original project: [ErlichLiu/Proma](https://github.com/ErlichLiu/Proma)
 
 ## License
 

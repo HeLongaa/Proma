@@ -30,6 +30,10 @@ export interface AppSettings {
   lastEnvironmentCheck?: EnvironmentCheckResult
   /** 是否启用桌面通知 */
   notificationsEnabled?: boolean
+  /** 是否显示状态栏（托盘）图标 */
+  showTrayIcon?: boolean
+  /** 新建对话快捷键（如 "meta+n"、"ctrl+n"） */
+  newConversationShortcut?: string
 }
 
 /** 设置 IPC 通道 */

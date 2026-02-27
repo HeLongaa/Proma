@@ -18,6 +18,7 @@ import { MessageSquare, AlertCircle, X } from 'lucide-react'
 import { ChatHeader } from './ChatHeader'
 import { ChatMessages } from './ChatMessages'
 import { ChatInput } from './ChatInput'
+import { ChatTokenBadge } from './ChatTokenBadge'
 import { PromptEditorSidebar } from './PromptEditorSidebar'
 import type { InlineEditSubmitPayload } from './ChatMessageItem'
 import {
@@ -36,6 +37,7 @@ import {
   INITIAL_MESSAGE_LIMIT,
   chatStreamErrorsAtom,
   currentChatErrorAtom,
+  chatTokenUsageAtom,
 } from '@/atoms/chat-atoms'
 import { resolvedSystemMessageAtom, promptSidebarOpenAtom } from '@/atoms/system-prompt-atoms'
 import { cn } from '@/lib/utils'
@@ -65,6 +67,7 @@ export function ChatView(): React.ReactElement {
   const [pendingAttachments, setPendingAttachments] = useAtom(pendingAttachmentsAtom)
   const setHasMoreMessages = useSetAtom(hasMoreMessagesAtom)
   const setChatStreamErrors = useSetAtom(chatStreamErrorsAtom)
+  const setChatTokenUsage = useSetAtom(chatTokenUsageAtom)
   const chatError = useAtomValue(currentChatErrorAtom)
   const isStreaming = useAtomValue(streamingAtom)
   const resolvedSystemMessage = useAtomValue(resolvedSystemMessageAtom)
@@ -166,6 +169,18 @@ export function ChatView(): React.ReactElement {
       (event: StreamCompleteEvent) => {
         // 清理 Map 中的流式状态
         removeState(event.conversationId)
+
+        // 更新 token 用量
+        if (event.inputTokens !== undefined || event.outputTokens !== undefined) {
+          setChatTokenUsage((prev) => {
+            const map = new Map(prev)
+            map.set(event.conversationId, {
+              inputTokens: event.inputTokens,
+              outputTokens: event.outputTokens,
+            })
+            return map
+          })
+        }
 
         // 仅当完成的是当前对话时，重新加载消息
         if (event.conversationId === currentConvIdRef.current) {
@@ -660,6 +675,9 @@ export function ChatView(): React.ReactElement {
               </button>
             </div>
           )}
+
+          {/* Token 用量指示器 */}
+          <ChatTokenBadge />
 
           {/* 底部：输入框 */}
           <ChatInput

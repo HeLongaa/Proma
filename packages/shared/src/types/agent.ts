@@ -581,6 +581,10 @@ export const AGENT_IPC_CHANNELS = {
   /** 复制文件夹到 session 工作目录 */
   COPY_FOLDER_TO_SESSION: 'agent:copy-folder-to-session',
 
+  // 导出
+  /** 导出 Agent 会话为 Markdown 文件 */
+  EXPORT_MARKDOWN: 'agent:export-markdown',
+
   // 文件系统操作
   /** 获取 session 工作路径 */
   GET_SESSION_PATH: 'agent:get-session-path',

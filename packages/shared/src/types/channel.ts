@@ -2,7 +2,7 @@
  * 渠道（Channel）相关类型定义
  *
  * 渠道是用户配置的 AI 供应商连接，包含 API Key、模型列表等信息。
- * API Key 使用 Electron safeStorage 加密后存储在本地配置文件中。
+ * API Key 以明文存储在本地配置文件中。
  */
 
 /**
@@ -80,6 +80,8 @@ export interface Channel {
   baseUrl: string
   /** 加密后的 API Key（base64 编码） */
   apiKey: string
+  /** 自定义渠道图标标识（对应内置图标 key，留空使用默认 Logo） */
+  iconUrl?: string
   /** 可用模型列表 */
   models: ChannelModel[]
   /** 是否启用 */
@@ -99,6 +101,8 @@ export interface ChannelCreateInput {
   baseUrl: string
   /** 明文 API Key，主进程会加密后存储 */
   apiKey: string
+  /** 自定义渠道图标标识 */
+  iconUrl?: string
   models: ChannelModel[]
   enabled: boolean
 }
@@ -112,6 +116,8 @@ export interface ChannelUpdateInput {
   baseUrl?: string
   /** 明文 API Key，为空字符串表示不更新 */
   apiKey?: string
+  /** 自定义渠道图标标识（空字符串清除自定义图标） */
+  iconUrl?: string
   models?: ChannelModel[]
   enabled?: boolean
 }

@@ -10,8 +10,10 @@
 
 import * as React from 'react'
 import { useAtom, useSetAtom, useAtomValue } from 'jotai'
-import { Pin, PinOff, Settings, Plus, Trash2, Pencil, ChevronDown, ChevronRight, Plug, Zap } from 'lucide-react'
+import { Pin, PinOff, Settings, Plus, Trash2, Pencil, ChevronDown, ChevronRight, Plug, Zap, Share2, Ellipsis } from 'lucide-react'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { newConversationShortcutAtom, formatShortcutDisplay } from '@/atoms/shortcut'
 import { ModeSwitcher } from './ModeSwitcher'
 import { activeViewAtom } from '@/atoms/active-view'
 import { appModeAtom } from '@/atoms/app-mode'
@@ -47,12 +49,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import type { ActiveView } from '@/atoms/active-view'
 import type { ConversationMeta, AgentSessionMeta, WorkspaceCapabilities } from '@proma/shared'
 
@@ -157,6 +159,8 @@ export function LeftSidebar({ width }: LeftSidebarProps): React.ReactElement {
   const agentChannelId = useAtomValue(agentChannelIdAtom)
   const currentWorkspaceId = useAtomValue(currentAgentWorkspaceIdAtom)
   const workspaces = useAtomValue(agentWorkspacesAtom)
+  const shortcut = useAtomValue(newConversationShortcutAtom)
+  const shortcutDisplay = formatShortcutDisplay(shortcut)
 
   // 工作区能力（MCP + Skill 计数）
   const [capabilities, setCapabilities] = React.useState<WorkspaceCapabilities | null>(null)
@@ -390,13 +394,27 @@ export function LeftSidebar({ width }: LeftSidebarProps): React.ReactElement {
 
       {/* 新对话/新会话按钮 */}
       <div className="px-3 pt-2">
-        <button
-          onClick={mode === 'agent' ? handleNewAgentSession : handleNewConversation}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-[10px] text-[13px] font-medium text-foreground/70 bg-foreground/[0.04] hover:bg-foreground/[0.08] transition-colors duration-100 titlebar-no-drag border border-dashed border-foreground/10 hover:border-foreground/20"
-        >
-          <Plus size={14} />
-          <span>{mode === 'agent' ? '新会话' : '新对话'}</span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={mode === 'agent' ? handleNewAgentSession : handleNewConversation}
+              className="group w-full flex items-center justify-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-foreground/70 hover:text-foreground bg-primary/[0.06] hover:bg-primary/[0.12] border border-transparent hover:border-blue-300/40 transition-all duration-200 titlebar-no-drag hover:shadow-sm active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/15 group-hover:bg-primary/25 transition-colors duration-200">
+                <Plus size={14} className="text-primary" />
+              </div>
+              <span>{mode === 'agent' ? '开启新会话' : '开启新对话'}</span>
+              {shortcutDisplay && (
+                <span className="text-[11px] text-foreground/0 group-hover:text-foreground/40 transition-all duration-200 select-none">
+                  {shortcutDisplay}
+                </span>
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8}>
+            <p>{mode === 'agent' ? '开启新会话' : '开启新对话'} ({shortcutDisplay})</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Chat 模式：导航菜单（置顶区域） */}
@@ -643,103 +661,111 @@ function ConversationItem({
   }
 
   const isPinned = !!conversation.pinned
+  const [menuOpen, setMenuOpen] = React.useState(false)
 
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={onSelect}
-          onDoubleClick={(e) => {
-            e.stopPropagation()
-            startEdit()
-          }}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-[7px] rounded-[10px] transition-colors duration-100 titlebar-no-drag text-left',
-            active
-              ? 'bg-foreground/[0.08] dark:bg-foreground/[0.08] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
-              : 'hover:bg-foreground/[0.04] dark:hover:bg-foreground/[0.04]'
-          )}
-        >
-          <div className="flex-1 min-w-0">
-            {editing ? (
-              <input
-                ref={inputRef}
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onBlur={saveTitle}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent text-[13px] leading-5 text-foreground border-b border-primary/50 outline-none px-0 py-0"
-                maxLength={100}
-              />
-            ) : (
-              <div className={cn(
-                'truncate text-[13px] leading-5 flex items-center gap-1.5',
-                active ? 'text-foreground' : 'text-foreground/80'
-              )}>
-                {/* 流式输出绿色呼吸点指示器 */}
-                {streaming && (
-                  <span className="relative flex-shrink-0 size-2">
-                    <span className="absolute inset-0 rounded-full bg-green-500/60 animate-ping" />
-                    <span className="relative block size-2 rounded-full bg-green-500" />
-                  </span>
-                )}
-                {/* 置顶标记 */}
-                {showPinIcon && (
-                  <Pin size={11} className="flex-shrink-0 text-primary/60" />
-                )}
-                <span className="truncate">{conversation.title}</span>
-              </div>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        startEdit()
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={cn(
+        'w-full flex items-center gap-2 px-3 py-[7px] rounded-[10px] transition-colors duration-100 titlebar-no-drag text-left',
+        active
+          ? 'bg-foreground/[0.08] dark:bg-foreground/[0.08] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
+          : 'hover:bg-foreground/[0.04] dark:hover:bg-foreground/[0.04]'
+      )}
+    >
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={saveTitle}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-transparent text-[13px] leading-5 text-foreground border-b border-primary/50 outline-none px-0 py-0"
+            maxLength={100}
+          />
+        ) : (
+          <div className={cn(
+            'truncate text-[13px] leading-5 flex items-center gap-1.5',
+            active ? 'text-foreground' : 'text-foreground/80'
+          )}>
+            {/* 流式输出绿色呼吸点指示器 */}
+            {streaming && (
+              <span className="relative flex-shrink-0 size-2">
+                <span className="absolute inset-0 rounded-full bg-green-500/60 animate-ping" />
+                <span className="relative block size-2 rounded-full bg-green-500" />
+              </span>
             )}
+            {/* 置顶标记 */}
+            {showPinIcon && (
+              <Pin size={11} className="flex-shrink-0 text-primary/60" />
+            )}
+            <span className="truncate">{conversation.title}</span>
           </div>
+        )}
+      </div>
 
-          {/* 删除按钮（始终渲染，hover 时可见） */}
+      {/* 更多按钮（hover 或菜单打开时可见） */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRequestDelete()
-            }}
+            onClick={(e) => e.stopPropagation()}
             className={cn(
-              'flex-shrink-0 p-1 rounded-md text-foreground/30 hover:bg-destructive/10 hover:text-destructive transition-all duration-100',
-              hovered && !editing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              'flex-shrink-0 p-1 rounded-md text-foreground/40 hover:text-foreground/70 transition-all duration-100',
+              (hovered || menuOpen) && !editing ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
-            title="删除对话"
           >
-            <Trash2 size={13} />
+            <Ellipsis size={14} />
           </button>
-        </div>
-      </ContextMenuTrigger>
-
-      {/* 右键菜单 */}
-      <ContextMenuContent className="w-40">
-        <ContextMenuItem
-          className="gap-2 text-[13px]"
-          onSelect={() => onTogglePin(conversation.id)}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="right"
+          className="z-[100] w-44 rounded-[16px] backdrop-blur-xl bg-popover/80 border-border/50 shadow-lg p-1.5"
         >
-          {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-          {isPinned ? '取消置顶' : '置顶对话'}
-        </ContextMenuItem>
-        <ContextMenuItem
-          className="gap-2 text-[13px]"
-          onSelect={startEdit}
-        >
-          <Pencil size={14} />
-          重命名
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="gap-2 text-[13px] text-destructive focus:text-destructive"
-          onSelect={onRequestDelete}
-        >
-          <Trash2 size={14} />
-          删除对话
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2"
+            onSelect={startEdit}
+          >
+            <Pencil size={14} className="text-foreground/60" />
+            重命名
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2"
+            onSelect={() => onTogglePin(conversation.id)}
+          >
+            {isPinned ? <PinOff size={14} className="text-foreground/60" /> : <Pin size={14} className="text-foreground/60" />}
+            {isPinned ? '取消置顶' : '置顶对话'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2"
+            onSelect={() => {
+              window.electronAPI.exportConversationMarkdown(conversation.id, conversation.title)
+            }}
+          >
+            <Share2 size={14} className="text-foreground/60" />
+            分享
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-1" />
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2 text-destructive focus:text-destructive"
+            onSelect={onRequestDelete}
+          >
+            <Trash2 size={14} />
+            删除对话
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }
 
@@ -804,88 +830,98 @@ function AgentSessionItem({
     }
   }
 
+  const [menuOpen, setMenuOpen] = React.useState(false)
+
   return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={onSelect}
-          onDoubleClick={(e) => {
-            e.stopPropagation()
-            startEdit()
-          }}
-          onMouseEnter={onMouseEnter}
-          onMouseLeave={onMouseLeave}
-          className={cn(
-            'w-full flex items-center gap-2 px-3 py-[7px] rounded-[10px] transition-colors duration-100 titlebar-no-drag text-left',
-            active
-              ? 'bg-foreground/[0.08] dark:bg-foreground/[0.08] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
-              : 'hover:bg-foreground/[0.04] dark:hover:bg-foreground/[0.04]'
-          )}
-        >
-          <div className="flex-1 min-w-0">
-            {editing ? (
-              <input
-                ref={inputRef}
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onBlur={saveTitle}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent text-[13px] leading-5 text-foreground border-b border-primary/50 outline-none px-0 py-0"
-                maxLength={100}
-              />
-            ) : (
-              <div className={cn(
-                'truncate text-[13px] leading-5 flex items-center gap-1.5',
-                active ? 'text-foreground' : 'text-foreground/80'
-              )}>
-                {running && (
-                  <span className="relative flex-shrink-0 size-4 flex items-center justify-center">
-                    <span className="absolute size-2 rounded-full bg-blue-500/60 animate-ping" />
-                    <span className="relative block size-2 rounded-full bg-blue-500" />
-                  </span>
-                )}
-                <span className="truncate">{session.title}</span>
-              </div>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        startEdit()
+      }}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className={cn(
+        'w-full flex items-center gap-2 px-3 py-[7px] rounded-[10px] transition-colors duration-100 titlebar-no-drag text-left',
+        active
+          ? 'bg-foreground/[0.08] dark:bg-foreground/[0.08] shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]'
+          : 'hover:bg-foreground/[0.04] dark:hover:bg-foreground/[0.04]'
+      )}
+    >
+      <div className="flex-1 min-w-0">
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={editTitle}
+            onChange={(e) => setEditTitle(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onBlur={saveTitle}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full bg-transparent text-[13px] leading-5 text-foreground border-b border-primary/50 outline-none px-0 py-0"
+            maxLength={100}
+          />
+        ) : (
+          <div className={cn(
+            'truncate text-[13px] leading-5 flex items-center gap-1.5',
+            active ? 'text-foreground' : 'text-foreground/80'
+          )}>
+            {running && (
+              <span className="relative flex-shrink-0 size-4 flex items-center justify-center">
+                <span className="absolute size-2 rounded-full bg-blue-500/60 animate-ping" />
+                <span className="relative block size-2 rounded-full bg-blue-500" />
+              </span>
             )}
+            <span className="truncate">{session.title}</span>
           </div>
+        )}
+      </div>
 
-          {/* 删除按钮（始终渲染，hover 时可见） */}
+      {/* 更多按钮（hover 或菜单打开时可见） */}
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+        <DropdownMenuTrigger asChild>
           <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onRequestDelete()
-            }}
+            onClick={(e) => e.stopPropagation()}
             className={cn(
-              'flex-shrink-0 p-1 rounded-md text-foreground/30 hover:bg-destructive/10 hover:text-destructive transition-all duration-100',
-              hovered && !editing ? 'opacity-100' : 'opacity-0 pointer-events-none'
+              'flex-shrink-0 p-1 rounded-md text-foreground/40 hover:text-foreground/70 transition-all duration-100',
+              (hovered || menuOpen) && !editing ? 'opacity-100' : 'opacity-0 pointer-events-none'
             )}
-            title="删除会话"
           >
-            <Trash2 size={13} />
+            <Ellipsis size={14} />
           </button>
-        </div>
-      </ContextMenuTrigger>
-
-      <ContextMenuContent className="w-40">
-        <ContextMenuItem
-          className="gap-2 text-[13px]"
-          onSelect={startEdit}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          side="right"
+          className="z-[100] w-44 rounded-[16px] backdrop-blur-xl bg-popover/80 border-border/50 shadow-lg p-1.5"
         >
-          <Pencil size={14} />
-          重命名
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem
-          className="gap-2 text-[13px] text-destructive focus:text-destructive"
-          onSelect={onRequestDelete}
-        >
-          <Trash2 size={14} />
-          删除会话
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2"
+            onSelect={startEdit}
+          >
+            <Pencil size={14} className="text-foreground/60" />
+            重命名
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2"
+            onSelect={() => {
+              window.electronAPI.exportAgentSessionMarkdown(session.id, session.title)
+            }}
+          >
+            <Share2 size={14} className="text-foreground/60" />
+            分享
+          </DropdownMenuItem>
+          <DropdownMenuSeparator className="my-1" />
+          <DropdownMenuItem
+            className="gap-2.5 text-[13px] rounded-[10px] px-2.5 py-2 text-destructive focus:text-destructive"
+            onSelect={onRequestDelete}
+          >
+            <Trash2 size={14} />
+            删除会话
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

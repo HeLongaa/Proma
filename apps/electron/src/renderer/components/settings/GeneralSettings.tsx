@@ -7,7 +7,7 @@
 
 import * as React from 'react'
 import { useAtom } from 'jotai'
-import { Camera, ImagePlus } from 'lucide-react'
+import { Camera, ImagePlus, Keyboard } from 'lucide-react'
 import Picker from '@emoji-mart/react'
 import data from '@emoji-mart/data'
 import {
@@ -23,6 +23,17 @@ import {
   notificationsEnabledAtom,
   updateNotificationsEnabled,
 } from '@/atoms/notifications'
+import {
+  showTrayIconAtom,
+  updateShowTrayIcon,
+} from '@/atoms/tray-icon'
+import {
+  newConversationShortcutAtom,
+  formatShortcutDisplay,
+  shortcutFromEvent,
+  updateShortcut,
+  DEFAULT_SHORTCUT,
+} from '@/atoms/shortcut'
 import { cn } from '@/lib/utils'
 
 /** emoji-mart 选择回调的 emoji 对象类型 */
@@ -38,6 +49,10 @@ interface EmojiMartEmoji {
 export function GeneralSettings(): React.ReactElement {
   const [userProfile, setUserProfile] = useAtom(userProfileAtom)
   const [notificationsEnabled, setNotificationsEnabled] = useAtom(notificationsEnabledAtom)
+  const [showTrayIcon, setShowTrayIcon] = useAtom(showTrayIconAtom)
+  const [shortcut, setShortcut] = useAtom(newConversationShortcutAtom)
+  const [isRecording, setIsRecording] = React.useState(false)
+  const recordBtnRef = React.useRef<HTMLButtonElement>(null)
   const [isEditingName, setIsEditingName] = React.useState(false)
   const [nameInput, setNameInput] = React.useState(userProfile.userName)
   const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
@@ -90,6 +105,54 @@ export function GeneralSettings(): React.ReactElement {
       setNameInput(userProfile.userName)
       setIsEditingName(false)
     }
+  }
+
+  /** 开始录制快捷键 */
+  const startRecording = (): void => {
+    setIsRecording(true)
+  }
+
+  /** 快捷键录制：监听按键事件 */
+  React.useEffect(() => {
+    if (!isRecording) return
+
+    const handler = (e: KeyboardEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      // Escape 取消录制
+      if (e.key === 'Escape') {
+        setIsRecording(false)
+        return
+      }
+
+      const result = shortcutFromEvent(e)
+      if (result) {
+        setShortcut(result)
+        updateShortcut(result)
+        setIsRecording(false)
+      }
+    }
+
+    // 点击外部取消录制
+    const clickHandler = (e: MouseEvent): void => {
+      if (recordBtnRef.current && !recordBtnRef.current.contains(e.target as Node)) {
+        setIsRecording(false)
+      }
+    }
+
+    document.addEventListener('keydown', handler, true)
+    document.addEventListener('mousedown', clickHandler)
+    return () => {
+      document.removeEventListener('keydown', handler, true)
+      document.removeEventListener('mousedown', clickHandler)
+    }
+  }, [isRecording, setShortcut])
+
+  /** 重置为默认快捷键 */
+  const resetShortcut = (): void => {
+    setShortcut(DEFAULT_SHORTCUT)
+    updateShortcut(DEFAULT_SHORTCUT)
   }
 
   return (
@@ -211,6 +274,52 @@ export function GeneralSettings(): React.ReactElement {
               updateNotificationsEnabled(checked)
             }}
           />
+          <SettingsToggle
+            label="状态栏图标"
+            description="在系统状态栏（托盘）显示 Proma 图标"
+            checked={showTrayIcon}
+            onCheckedChange={(checked) => {
+              setShowTrayIcon(checked)
+              updateShowTrayIcon(checked)
+            }}
+          />
+        </SettingsCard>
+      </SettingsSection>
+
+      {/* 快捷键设置 */}
+      <SettingsSection
+        title="快捷键"
+        description="自定义键盘快捷键"
+      >
+        <SettingsCard>
+          <SettingsRow
+            label="新建对话"
+            description="快速创建新的对话或 Agent 会话"
+            icon={<Keyboard size={16} className="text-foreground/50" />}
+          >
+            <div className="flex items-center gap-3">
+              <button
+                ref={recordBtnRef}
+                onClick={startRecording}
+                className={cn(
+                  'px-6 py-1.5 rounded-lg text-[13px] font-mono tracking-widest transition-all duration-200 min-w-[100px] text-center',
+                  isRecording
+                    ? 'bg-primary/15 text-primary border border-primary/30 animate-pulse'
+                    : 'bg-foreground/[0.06] text-foreground/70 hover:bg-foreground/[0.1] hover:text-foreground border border-transparent'
+                )}
+              >
+                {isRecording ? '请按下快捷键…' : formatShortcutDisplay(shortcut)}
+              </button>
+              {shortcut !== DEFAULT_SHORTCUT && (
+                <button
+                  onClick={resetShortcut}
+                  className="text-[12px] text-foreground/40 hover:text-foreground/70 transition-colors"
+                >
+                  重置
+                </button>
+              )}
+            </div>
+          </SettingsRow>
         </SettingsCard>
       </SettingsSection>
     </div>

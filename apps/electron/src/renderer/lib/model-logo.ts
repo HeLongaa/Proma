@@ -106,9 +106,6 @@ import StepDarkLogo from '@/assets/models/step_dark.png'
 // MiniMax
 import MiniMaxLogo from '@/assets/models/minimax.png'
 
-// Proma
-import PromaLogo from '@/assets/models/proma.png'
-
 // Cohere
 import CohereLogo from '@/assets/models/cohere.png'
 import CohereDarkLogo from '@/assets/models/cohere_dark.png'
@@ -248,7 +245,6 @@ const PROVIDER_LOGO_MAP: Record<ProviderType, string> = {
  * 优先级高于 ProviderType，用于识别用户通过兼容格式接入的实际供应商。
  */
 const URL_LOGO_MAP: Array<[RegExp, string]> = [
-  [/proma\.cool/i, PromaLogo],
   [/moonshot\.cn|kimi/i, MoonshotLogo],
   [/bigmodel\.cn|zhipuai/i, ZhipuLogo],
   [/minimax/i, MiniMaxLogo],
@@ -334,4 +330,76 @@ export function getChannelLogo(baseUrl: string): string {
 }
 
 /** 默认模型图标 */
-export { DefaultLogo, PromaLogo }
+export { DefaultLogo }
+
+// ===== 渠道图标选项 =====
+
+/** 渠道图标选项 */
+export interface ChannelIconOption {
+  /** 图标标识 key */
+  key: string
+  /** 显示名称 */
+  label: string
+  /** 图标 URL（静态资源路径） */
+  src: string
+}
+
+/**
+ * 所有可选的渠道图标列表
+ *
+ * 用于渠道表单的图标选择器，包含所有内置供应商图标。
+ */
+export const CHANNEL_ICON_OPTIONS: ChannelIconOption[] = [
+  { key: 'anthropic', label: 'Anthropic', src: ClaudeLogo },
+  { key: 'openai', label: 'OpenAI', src: OpenAILogo },
+  { key: 'deepseek', label: 'DeepSeek', src: DeepSeekLogo },
+  { key: 'google', label: 'Google', src: GeminiLogo },
+  { key: 'moonshot', label: 'Moonshot', src: MoonshotLogo },
+  { key: 'zhipu', label: '智谱 AI', src: ZhipuLogo },
+  { key: 'minimax', label: 'MiniMax', src: MiniMaxLogo },
+  { key: 'doubao', label: '豆包', src: DoubaoLogo },
+  { key: 'qwen', label: '通义千问', src: QwenLogo },
+  { key: 'grok', label: 'Grok', src: GrokLogo },
+  { key: 'step', label: '阶跃', src: StepLogo },
+  { key: 'cohere', label: 'Cohere', src: CohereLogo },
+  { key: 'sparkdesk', label: '讯飞星火', src: SparkDeskLogo },
+  { key: 'hunyuan', label: '混元', src: HunyuanLogo },
+  { key: 'wenxin', label: '文心', src: WenxinLogo },
+  { key: 'yi', label: '零一', src: YiLogo },
+  { key: 'llama', label: 'Llama', src: LlamaLogo },
+  { key: 'mistral', label: 'Mistral', src: MistralLogo },
+]
+
+/** 图标 key → 图标路径映射表（快速查找） */
+const ICON_KEY_MAP: Record<string, string> = Object.fromEntries(
+  CHANNEL_ICON_OPTIONS.map((opt) => [opt.key, opt.src])
+)
+
+/**
+ * 根据图标 key 获取渠道图标路径
+ */
+export function getIconByKey(key: string): string | undefined {
+  return ICON_KEY_MAP[key]
+}
+
+/**
+ * 获取渠道展示用 Logo（优先自定义图标 → URL 匹配 → 供应商匹配 → 默认）
+ */
+export function resolveChannelIcon(iconUrl?: string, baseUrl?: string, provider?: ProviderType): string {
+  // 1. 自定义图标
+  if (iconUrl) {
+    const custom = getIconByKey(iconUrl)
+    if (custom) return custom
+  }
+  // 2. URL 域名匹配
+  if (baseUrl) {
+    for (const [regex, logo] of URL_LOGO_MAP) {
+      if (regex.test(baseUrl)) return logo
+    }
+  }
+  // 3. 供应商匹配
+  if (provider) {
+    return PROVIDER_LOGO_MAP[provider] ?? DefaultLogo
+  }
+  return DefaultLogo
+}

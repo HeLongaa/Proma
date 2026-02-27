@@ -38,6 +38,10 @@ export interface StreamSSEResult {
   toolCalls: ToolCall[]
   /** 停止原因（'tool_use' 表示需要执行工具后继续） */
   stopReason?: string
+  /** 输入（上传）token 数 */
+  inputTokens?: number
+  /** 输出（下载）token 数 */
+  outputTokens?: number
 }
 
 /**
@@ -77,6 +81,8 @@ export async function streamSSE(options: StreamSSEOptions): Promise<StreamSSERes
   let content = ''
   let reasoning = ''
   let stopReason: string | undefined
+  let inputTokens: number | undefined
+  let outputTokens: number | undefined
   const reader = response.body.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
@@ -125,6 +131,9 @@ export async function streamSSE(options: StreamSSEOptions): Promise<StreamSSERes
                 pending.args += event.argumentsDelta
               }
             }
+          } else if (event.type === 'usage') {
+            if (event.inputTokens !== undefined) inputTokens = event.inputTokens
+            if (event.outputTokens !== undefined) outputTokens = event.outputTokens
           } else if (event.type === 'done' && event.stopReason) {
             stopReason = event.stopReason
           }
@@ -163,7 +172,7 @@ export async function streamSSE(options: StreamSSEOptions): Promise<StreamSSERes
   }
 
   onEvent({ type: 'done', stopReason })
-  return { content, reasoning, toolCalls, stopReason }
+  return { content, reasoning, toolCalls, stopReason, inputTokens, outputTokens }
 }
 
 // ===== 非流式标题请求 =====

@@ -4,7 +4,7 @@
  * 负责注册主进程和渲染进程之间的通信处理器
  */
 
-import { ipcMain, nativeTheme, shell, dialog, BrowserWindow } from 'electron'
+import { ipcMain, nativeTheme, shell, dialog, BrowserWindow, Menu } from 'electron'
 import { IPC_CHANNELS, CHANNEL_IPC_CHANNELS, CHAT_IPC_CHANNELS, AGENT_IPC_CHANNELS, ENVIRONMENT_IPC_CHANNELS, PROXY_IPC_CHANNELS, GITHUB_RELEASE_IPC_CHANNELS, SYSTEM_PROMPT_IPC_CHANNELS, MEMORY_IPC_CHANNELS } from '@proma/shared'
 import { USER_PROFILE_IPC_CHANNELS, SETTINGS_IPC_CHANNELS } from '../types'
 import type {
@@ -87,6 +87,7 @@ import {
 import { extractTextFromAttachment } from './lib/document-parser'
 import { getUserProfile, updateUserProfile } from './lib/user-profile-service'
 import { getSettings, updateSettings } from './lib/settings-service'
+import { createTray, destroyTray, getTray } from './tray'
 import { checkEnvironment } from './lib/environment-checker'
 import { getProxySettings, saveProxySettings } from './lib/proxy-settings-service'
 import { detectSystemProxy } from './lib/system-proxy-detector'
@@ -117,6 +118,7 @@ import {
   setWorkspacePermissionMode,
 } from './lib/agent-workspace-manager'
 import { getMemoryConfig, setMemoryConfig } from './lib/memory-service'
+import { exportChatAsMarkdown, exportAgentSessionAsMarkdown } from './lib/export-markdown-service'
 import {
   getSystemPromptConfig,
   createSystemPrompt,
@@ -318,6 +320,14 @@ export function registerIpcHandlers(): void {
     }
   )
 
+  // 导出对话为 Markdown
+  ipcMain.handle(
+    CHAT_IPC_CHANNELS.EXPORT_MARKDOWN,
+    async (_, conversationId: string, title: string): Promise<string | null> => {
+      return exportChatAsMarkdown(conversationId, title)
+    }
+  )
+
   // 发送消息（触发 AI 流式响应）
   // 注意：通过 event.sender 获取 webContents 用于推送流式事件
   ipcMain.handle(
@@ -450,7 +460,25 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     SETTINGS_IPC_CHANNELS.UPDATE,
     async (_, updates: Partial<AppSettings>): Promise<AppSettings> => {
-      return updateSettings(updates)
+      const result = updateSettings(updates)
+
+      // 快捷键变更时重建菜单
+      if (updates.newConversationShortcut !== undefined) {
+        const { createApplicationMenu } = await import('./menu')
+        const newMenu = createApplicationMenu()
+        Menu.setApplicationMenu(newMenu)
+      }
+
+      // 响应托盘图标显隐设置变更
+      if (updates.showTrayIcon !== undefined) {
+        if (updates.showTrayIcon) {
+          if (!getTray()) createTray()
+        } else {
+          destroyTray()
+        }
+      }
+
+      return result
     }
   )
 
@@ -564,6 +592,14 @@ export function registerIpcHandlers(): void {
       // 清理 AskUser 服务中的待处理请求
       askUserService.clearSessionPending(id)
       return deleteAgentSession(id)
+    }
+  )
+
+  // 导出 Agent 会话为 Markdown
+  ipcMain.handle(
+    AGENT_IPC_CHANNELS.EXPORT_MARKDOWN,
+    async (_, sessionId: string, title: string): Promise<string | null> => {
+      return exportAgentSessionAsMarkdown(sessionId, title)
     }
   )
 

@@ -204,6 +204,10 @@ export interface StreamCompleteEvent {
   model: string
   /** 助手消息 ID */
   messageId: string
+  /** 输入（上传）token 数 */
+  inputTokens?: number
+  /** 输出（下载）token 数 */
+  outputTokens?: number
 }
 
 /**
@@ -330,6 +334,10 @@ export const CHAT_IPC_CHANNELS = {
   // 置顶管理
   /** 切换对话置顶状态 */
   TOGGLE_PIN: 'chat:toggle-pin',
+
+  // 导出
+  /** 导出对话为 Markdown 文件 */
+  EXPORT_MARKDOWN: 'chat:export-markdown',
 
   // 流式事件（主进程 → 渲染进程推送）
   /** 内容片段 */

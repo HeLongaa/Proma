@@ -59,6 +59,12 @@ interface GoogleStreamData {
     }
     finishReason?: string
   }>
+  /** Token 用量元数据 */
+  usageMetadata?: {
+    promptTokenCount?: number
+    candidatesTokenCount?: number
+    totalTokenCount?: number
+  }
 }
 
 /** Google 标题响应 */
@@ -242,6 +248,15 @@ export class GoogleAdapter implements ProviderAdapter {
       if (!parts) return []
 
       const events: StreamEvent[] = []
+
+      // Token 用量
+      if (parsed.usageMetadata) {
+        events.push({
+          type: 'usage',
+          inputTokens: parsed.usageMetadata.promptTokenCount,
+          outputTokens: parsed.usageMetadata.candidatesTokenCount,
+        })
+      }
 
       // 遍历所有 parts，区分推理内容、正常文本和函数调用
       for (const part of parts) {

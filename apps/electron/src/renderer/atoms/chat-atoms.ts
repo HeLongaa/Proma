@@ -182,6 +182,27 @@ export const currentChatErrorAtom = atom<string | null>((get) => {
  */
 export const conversationDraftsAtom = atom<Map<string, string>>(new Map())
 
+/** 单次对话的 Token 用量 */
+export interface ChatTokenUsage {
+  /** 输入（上传）token 数 */
+  inputTokens?: number
+  /** 输出（下载）token 数 */
+  outputTokens?: number
+}
+
+/**
+ * Token 用量 Map — 以 conversationId 为 key
+ * 每次流式完成时更新，记录该对话最近一次交互的 token 用量
+ */
+export const chatTokenUsageAtom = atom<Map<string, ChatTokenUsage>>(new Map())
+
+/** 当前对话的 Token 用量（派生只读原子） */
+export const currentChatTokenUsageAtom = atom<ChatTokenUsage | null>((get) => {
+  const currentId = get(currentConversationIdAtom)
+  if (!currentId) return null
+  return get(chatTokenUsageAtom).get(currentId) ?? null
+})
+
 /** 当前对话的草稿内容（派生读写原子） */
 export const currentConversationDraftAtom = atom(
   (get) => {

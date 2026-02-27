@@ -6,7 +6,7 @@
 
 import React, { useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
-import { useSetAtom, useAtomValue } from 'jotai'
+import { useSetAtom, useAtomValue, useAtom } from 'jotai'
 import App from './App'
 import {
   themeModeAtom,
@@ -15,19 +15,38 @@ import {
   applyThemeToDOM,
   initializeTheme,
 } from './atoms/theme'
+import { activeViewAtom } from './atoms/active-view'
+import { appModeAtom } from './atoms/app-mode'
 import {
   agentChannelIdAtom,
   agentModelIdAtom,
+  agentSessionsAtom,
   agentWorkspacesAtom,
+  currentAgentSessionIdAtom,
   currentAgentWorkspaceIdAtom,
   workspaceCapabilitiesVersionAtom,
   workspaceFilesVersionAtom,
 } from './atoms/agent-atoms'
+import {
+  conversationsAtom,
+  currentConversationIdAtom,
+  selectedModelAtom,
+} from './atoms/chat-atoms'
+import { promptConfigAtom, selectedPromptIdAtom } from './atoms/system-prompt-atoms'
 import { updateStatusAtom, initializeUpdater } from './atoms/updater'
 import {
   notificationsEnabledAtom,
   initializeNotifications,
 } from './atoms/notifications'
+import {
+  showTrayIconAtom,
+  initializeTrayIcon,
+} from './atoms/tray-icon'
+import {
+  newConversationShortcutAtom,
+  initializeShortcut,
+  matchesShortcut,
+} from './atoms/shortcut'
 import { useGlobalAgentListeners } from './hooks/useGlobalAgentListeners'
 import { Toaster } from './components/ui/sonner'
 import { UpdateDialog } from './components/settings/UpdateDialog'
@@ -159,6 +178,21 @@ function NotificationsInitializer(): null {
 }
 
 /**
+ * 托盘图标初始化组件
+ *
+ * 从主进程加载托盘图标显示设置。
+ */
+function TrayIconInitializer(): null {
+  const setShow = useSetAtom(showTrayIconAtom)
+
+  useEffect(() => {
+    initializeTrayIcon(setShow)
+  }, [setShow])
+
+  return null
+}
+
+/**
  * Agent IPC 监听器初始化组件
  *
  * 全局挂载，永不销毁。确保 Agent 流式事件、权限请求
@@ -169,12 +203,129 @@ function AgentListenersInitializer(): null {
   return null
 }
 
+/**
+ * 菜单导航初始化组件
+ *
+ * 监听主进程菜单发送的导航事件（如 Cmd+, 打开设置）。
+ */
+function MenuNavigationInitializer(): null {
+  const setActiveView = useSetAtom(activeViewAtom)
+
+  useEffect(() => {
+    const cleanup = window.electronAPI.onNavigateSettings(() => {
+      setActiveView('settings')
+    })
+    return cleanup
+  }, [setActiveView])
+
+  return null
+}
+
+/**
+ * 快捷键初始化组件
+ *
+ * 从设置加载快捷键，并注册全局键盘监听器。
+ * 按下快捷键时创建新对话/Agent 会话。
+ */
+function ShortcutInitializer(): null {
+  const [shortcut, setShortcut] = useAtom(newConversationShortcutAtom)
+  const mode = useAtomValue(appModeAtom)
+  const setActiveView = useSetAtom(activeViewAtom)
+
+  // Chat 模式相关
+  const selectedModel = useAtomValue(selectedModelAtom)
+  const setConversations = useSetAtom(conversationsAtom)
+  const setCurrentConversationId = useSetAtom(currentConversationIdAtom)
+  const promptConfig = useAtomValue(promptConfigAtom)
+  const setSelectedPromptId = useSetAtom(selectedPromptIdAtom)
+
+  // Agent 模式相关
+  const agentChannelId = useAtomValue(agentChannelIdAtom)
+  const currentWorkspaceId = useAtomValue(currentAgentWorkspaceIdAtom)
+  const setAgentSessions = useSetAtom(agentSessionsAtom)
+  const setCurrentAgentSessionId = useSetAtom(currentAgentSessionIdAtom)
+
+  // 初始化：从设置加载快捷键
+  useEffect(() => {
+    initializeShortcut(setShortcut)
+  }, [setShortcut])
+
+  /** 创建新对话/会话的核心逻辑 */
+  const createNewConversation = React.useCallback(async () => {
+    try {
+      if (mode === 'agent') {
+        const meta = await window.electronAPI.createAgentSession(
+          undefined,
+          agentChannelId || undefined,
+          currentWorkspaceId || undefined,
+        )
+        setAgentSessions((prev) => [meta, ...prev])
+        setCurrentAgentSessionId(meta.id)
+      } else {
+        const meta = await window.electronAPI.createConversation(
+          undefined,
+          selectedModel?.modelId,
+          selectedModel?.channelId,
+        )
+        setConversations((prev) => [meta, ...prev])
+        setCurrentConversationId(meta.id)
+        if (promptConfig.defaultPromptId) {
+          setSelectedPromptId(promptConfig.defaultPromptId)
+        }
+      }
+      setActiveView('conversations')
+    } catch (error) {
+      console.error('[快捷键] 创建对话失败:', error)
+    }
+  }, [
+    mode, selectedModel, agentChannelId, currentWorkspaceId,
+    setConversations, setCurrentConversationId, setActiveView,
+    setAgentSessions, setCurrentAgentSessionId, promptConfig, setSelectedPromptId,
+  ])
+
+  // 监听菜单栏"新建对话"IPC 事件
+  useEffect(() => {
+    const cleanup = window.electronAPI.onNewConversation(() => {
+      createNewConversation()
+    })
+    return cleanup
+  }, [createNewConversation])
+
+  // 注册全局键盘监听器（作为菜单 accelerator 的补充）
+  useEffect(() => {
+    if (!shortcut) return
+
+    const handler = (e: Event): void => {
+      const ke = e as KeyboardEvent
+      // 忽略输入框内的快捷键
+      const target = ke.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+
+      if (!matchesShortcut(ke, shortcut)) return
+
+      ke.preventDefault()
+      ke.stopPropagation()
+      createNewConversation()
+    }
+
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [shortcut, createNewConversation])
+
+  return null
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeInitializer />
     <AgentSettingsInitializer />
     <NotificationsInitializer />
+    <TrayIconInitializer />
     <AgentListenersInitializer />
+    <MenuNavigationInitializer />
+    <ShortcutInitializer />
     <UpdaterInitializer />
     <App />
     <UpdateDialog />

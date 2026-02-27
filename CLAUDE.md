@@ -107,7 +107,7 @@ bun run generate:icons    # 生成应用图标
 
 | 服务 | 职责 |
 |------|------|
-| `channel-manager.ts` | 渠道 CRUD、API Key AES-256-GCM 加密（Electron safeStorage）、连接测试、模型获取 |
+| `channel-manager.ts` | 渠道 CRUD、API Key 明文存储、连接测试、模型获取 |
 | `conversation-manager.ts` | 对话 CRUD、JSONL 消息存储、置顶、上下文分割 |
 | `chat-service.ts` | AI 流式调用编排、Provider 适配器集成、消息持久化、AbortController |
 | `agent-service.ts` | Agent SDK 调用编排、流式事件转换与推送、AbortController |
@@ -175,7 +175,7 @@ bun run generate:icons    # 生成应用图标
 
 ```
 ~/.proma/
-├── channels.json           # 渠道配置（API Key 经 safeStorage 加密）
+├── channels.json           # 渠道配置（API Key 明文存储）
 ├── conversations.json      # 对话索引（元数据，轻量）
 ├── conversations/          # 消息存储
 │   └── {uuid}.jsonl        # 每对话一个 JSONL 文件，追加写入
@@ -293,5 +293,5 @@ bun run generate:icons    # 生成应用图标
 - **权限模式**：safe / ask / allow-all
 - **Agent SDK**：@anthropic-ai/claude-agent-sdk（[v1 文档](https://platform.claude.com/docs/en/agent-sdk/typescript)、[v2 文档](https://platform.claude.com/docs/en/agent-sdk/typescript-v2-preview)）
 - **MCP 集成**：Model Context Protocol 用于外部数据源
-- **凭证存储**：AES-256-GCM 加密
+- **凭证存储**：明文存储（本地优先，无需 OS 钥匙串）
 - **配置位置**：`~/.proma/`（类似 `~/.craft-agent/`）

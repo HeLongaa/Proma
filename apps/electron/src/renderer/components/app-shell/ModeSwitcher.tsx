@@ -17,11 +17,11 @@ export function ModeSwitcher(): React.ReactElement {
 
   return (
     <div className="px-2 pt-2">
-      <div className="relative flex rounded-lg bg-muted p-1">
+      <div className="relative flex rounded-[19px] bg-muted p-1">
         {/* 滑动背景指示器 */}
         <div
           className={cn(
-            'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded bg-background shadow-sm transition-transform duration-300 ease-in-out',
+            'absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-[16px] bg-background shadow-sm transition-transform duration-300 ease-in-out',
             mode === 'chat' ? 'translate-x-0' : 'translate-x-full'
           )}
         />
@@ -30,7 +30,7 @@ export function ModeSwitcher(): React.ReactElement {
             key={value}
             onClick={() => setMode(value)}
             className={cn(
-              'relative z-[1] flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200',
+              'relative z-[1] flex-1 rounded-[16px] px-3 py-1.5 text-sm font-medium transition-colors duration-200',
               mode === value
                 ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground'

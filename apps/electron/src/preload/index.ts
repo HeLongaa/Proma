@@ -141,6 +141,9 @@ export interface ElectronAPI {
   /** 切换对话置顶状态 */
   togglePinConversation: (id: string) => Promise<ConversationMeta>
 
+  /** 导出对话为 Markdown 文件 */
+  exportConversationMarkdown: (id: string, title: string) => Promise<string | null>
+
   // ===== 消息发送 =====
 
   /** 发送消息（触发 AI 流式响应） */
@@ -204,6 +207,10 @@ export interface ElectronAPI {
   /** 订阅系统主题变化事件（返回清理函数） */
   onSystemThemeChanged: (callback: (isDark: boolean) => void) => () => void
 
+  /** 订阅菜单导航到设置页事件（Cmd+, 快捷键） */
+  onNavigateSettings: (callback: () => void) => () => void
+  onNewConversation: (callback: () => void) => () => void
+
   // ===== 环境检测相关 =====
 
   /** 执行环境检测 */
@@ -253,6 +260,9 @@ export interface ElectronAPI {
 
   /** 删除 Agent 会话 */
   deleteAgentSession: (id: string) => Promise<void>
+
+  /** 导出 Agent 会话为 Markdown 文件 */
+  exportAgentSessionMarkdown: (id: string, title: string) => Promise<string | null>
 
   /** 生成 Agent 会话标题 */
   generateAgentTitle: (input: AgentGenerateTitleInput) => Promise<string | null>
@@ -507,6 +517,10 @@ const electronAPI: ElectronAPI = {
     return ipcRenderer.invoke(CHAT_IPC_CHANNELS.TOGGLE_PIN, id)
   },
 
+  exportConversationMarkdown: (id: string, title: string) => {
+    return ipcRenderer.invoke(CHAT_IPC_CHANNELS.EXPORT_MARKDOWN, id, title)
+  },
+
   // 消息发送
   sendMessage: (input: ChatSendInput) => {
     return ipcRenderer.invoke(CHAT_IPC_CHANNELS.SEND_MESSAGE, input)
@@ -590,6 +604,18 @@ const electronAPI: ElectronAPI = {
     return () => { ipcRenderer.removeListener(SETTINGS_IPC_CHANNELS.ON_SYSTEM_THEME_CHANGED, listener) }
   },
 
+  onNavigateSettings: (callback: () => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('menu:navigate-settings', listener)
+    return () => { ipcRenderer.removeListener('menu:navigate-settings', listener) }
+  },
+
+  onNewConversation: (callback: () => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on('menu:new-conversation', listener)
+    return () => { ipcRenderer.removeListener('menu:new-conversation', listener) }
+  },
+
   // 环境检测
   checkEnvironment: () => {
     return ipcRenderer.invoke(ENVIRONMENT_IPC_CHANNELS.CHECK)
@@ -658,6 +684,10 @@ const electronAPI: ElectronAPI = {
 
   deleteAgentSession: (id: string) => {
     return ipcRenderer.invoke(AGENT_IPC_CHANNELS.DELETE_SESSION, id)
+  },
+
+  exportAgentSessionMarkdown: (id: string, title: string) => {
+    return ipcRenderer.invoke(AGENT_IPC_CHANNELS.EXPORT_MARKDOWN, id, title)
   },
 
   generateAgentTitle: (input: AgentGenerateTitleInput) => {
