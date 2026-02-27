@@ -85,18 +85,24 @@ jobs:
         run: bun run electron:build
         working-directory: .
 
-      # 打包并发布到 GitHub Releases
+      # 打包并发布到 GitHub Releases（网络下载偶尔 EOF，自动重试）
       - name: 打包并发布 (macOS)
         if: matrix.platform == 'mac'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
-        run: npx electron-builder --mac --publish always
-        working-directory: apps/electron
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: cd apps/electron && npx electron-builder --mac --publish always
 
       - name: 打包并发布 (Windows)
         if: matrix.platform == 'win'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --win --publish always
-        working-directory: apps/electron
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          max_attempts: 3
+          command: cd apps/electron && npx electron-builder --win --publish always
