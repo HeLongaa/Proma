@@ -97,10 +97,13 @@ export function installUpdate(): void {
     // 清理定时器
     cleanupUpdater()
 
+    // 使用 app.relaunch() 确保退出后重启（macOS 上 quitAndInstall 的内置重启机制不可靠）
+    app.relaunch()
+
     // isSilent=true: Windows NSIS 静默安装，不弹出安装向导
-    // isForceRunAfter=true: 安装完成后自动重新打开应用
-    console.log('[更新] 调用 autoUpdater.quitAndInstall(true, true)')
-    autoUpdater.quitAndInstall(true, true)
+    // isForceRunAfter=false: 不使用 updater 内置的重启（改用 app.relaunch()）
+    console.log('[更新] 调用 autoUpdater.quitAndInstall(true, false) + app.relaunch()')
+    autoUpdater.quitAndInstall(true, false)
 
     // 3 秒后备 app.quit()，以防 quitAndInstall 未能触发退出
     setTimeout(() => {
