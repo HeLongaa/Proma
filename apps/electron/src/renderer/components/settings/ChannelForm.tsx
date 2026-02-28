@@ -290,6 +290,15 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
     )
   }, [models, modelFilter])
 
+  /** 全选/取消全选（仅影响当前过滤后可见的模型） */
+  const handleToggleAll = (): void => {
+    const visibleIds = new Set(filteredModels.map((m) => m.id))
+    const allVisibleEnabled = filteredModels.length > 0 && filteredModels.every((m) => m.enabled)
+    setModels((prev) =>
+      prev.map((m) => (visibleIds.has(m.id) ? { ...m, enabled: !allVisibleEnabled } : m))
+    )
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* 标题栏 + 操作按钮 */}
@@ -501,12 +510,23 @@ export function ChannelForm({ channel, onSaved, onCancel }: ChannelFormProps): R
             </div>
           )}
 
-          {/* 模型计数 */}
+          {/* 模型计数 + 全选 */}
           {models.length > 0 && (
-            <div className="px-4 pt-2 pb-1 text-xs text-muted-foreground">
-              {modelFilter.trim()
-                ? `${filteredModels.length} / ${models.length} 个模型`
-                : `${models.filter((m) => m.enabled).length} 个已启用，共 ${models.length} 个模型`}
+            <div className="flex items-center justify-between px-4 pt-2 pb-1">
+              <div className="text-xs text-muted-foreground">
+                {modelFilter.trim()
+                  ? `${filteredModels.length} / ${models.length} 个模型`
+                  : `${models.filter((m) => m.enabled).length} 个已启用，共 ${models.length} 个模型`}
+              </div>
+              {filteredModels.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleToggleAll}
+                  className="text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  {filteredModels.every((m) => m.enabled) ? '取消全选' : '全选'}
+                </button>
+              )}
             </div>
           )}
 
